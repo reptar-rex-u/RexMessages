@@ -1,7 +1,7 @@
 {
   "name": "rexmessages",
   "productName": "RexMessages",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Google Messages for web wrapped as a Windows app with quick-reply popups and a photo gallery",
   "author": "Rex",
   "license": "MIT",

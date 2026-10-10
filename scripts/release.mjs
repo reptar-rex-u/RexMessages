@@ -33,14 +33,18 @@ if (bump !== 'current') run(`npm version ${bump} -m "Release v%s"`)
 const { version } = JSON.parse(readFileSync('package.json', 'utf8'))
 if (bump === 'current' && !read(`git tag --list v${version}`)) run(`git tag v${version}`)
 
+// The tag must reach GitHub before electron-builder creates the release,
+// otherwise GitHub tags the old commit and this push is rejected later.
+run('git push origin HEAD')
+run(`git push origin v${version}`)
+
 try {
   run('npm run build')
   run('npx electron-builder --win nsis --publish always', { env: { ...process.env, GH_TOKEN: token } })
 } catch {
-  console.error(`\nBuild or upload failed. v${version} was not published.`)
-  if (bump !== 'current') console.error(`To undo the version bump: git tag -d v${version} && git reset --hard HEAD~1`)
+  console.error(`\nBuild or upload failed, so v${version} isn't live yet. Fix the problem, then run:`)
+  console.error('  npm run release -- current')
   process.exit(1)
 }
 
-run('git push --follow-tags origin HEAD')
 console.log(`\nPublished v${version}: https://github.com/reptar-rex-u/RexMessages/releases/tag/v${version}`)

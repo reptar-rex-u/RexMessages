@@ -49,6 +49,7 @@ export function initUpdater(changed: (state: UpdateState) => void): void {
   }
   autoUpdater.autoDownload = true
   autoUpdater.autoInstallOnAppQuit = true
+  autoUpdater.disableWebInstaller = true
 
   autoUpdater.on('checking-for-update', () => setState({ status: 'checking' }))
   autoUpdater.on('update-available', (info) => setState({ status: 'downloading', version: info.version, percent: 0 }))

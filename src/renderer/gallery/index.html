@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'"
+    />
+    <title>RexMessages - Photos</title>
+    <link rel="stylesheet" href="./gallery.css" />
+  </head>
+  <body>
+    <header class="bar">
+      <div class="title">
+        <h1 id="title">Photos</h1>
+        <span id="count" class="muted"></span>
+      </div>
+      <div class="actions">
+        <button id="refresh" title="Reload photos from the open conversation">Refresh</button>
+        <button id="older" title="Scroll the conversation back to load older photos">Load older</button>
+        <button id="saveAll" class="primary" title="Save every photo to a folder">Save all</button>
+      </div>
+    </header>
+
+    <main id="content">
+      <div id="state" class="state"></div>
+      <div id="grid" class="grid"></div>
+    </main>
+
+    <div id="viewer" class="viewer" hidden>
+      <div class="viewer-bar">
+        <span id="vIndex" class="muted"></span>
+        <div class="group">
+          <button data-act="zoomOut" title="Zoom out (-)">-</button>
+          <span id="vZoom" class="zoom">100%</span>
+          <button data-act="zoomIn" title="Zoom in (+)">+</button>
+          <button data-act="fit" title="Fit to window (0)">Fit</button>
+        </div>
+        <div class="group">
+          <button data-act="rotateLeft" title="Rotate left (Shift+R)">&#x21BA;</button>
+          <button data-act="rotateRight" title="Rotate right (R)">&#x21BB;</button>
+        </div>
+        <div class="group">
+          <button data-act="save" title="Save as (Ctrl+S)">Save as</button>
+          <button data-act="copy" title="Copy image (Ctrl+C)">Copy</button>
+          <button data-act="open" title="Open in your default photo app (Enter)">Open in app</button>
+          <button data-act="folder" id="vFolder" title="Show the saved file in File Explorer" disabled>Show in folder</button>
+        </div>
+        <button data-act="close" class="close" title="Close (Esc)">&#x2715;</button>
+      </div>
+      <div id="stage" class="stage">
+        <button data-act="prev" class="nav prev" title="Previous (Left arrow)">&#x2039;</button>
+        <img id="vImg" alt="" draggable="false" />
+        <button data-act="next" class="nav next" title="Next (Right arrow)">&#x203A;</button>
+      </div>
+    </div>
+
+    <div id="toast" class="toast" hidden></div>
+    <script type="module" src="./gallery.ts"></script>
+  </body>
+</html>

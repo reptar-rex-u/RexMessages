@@ -1,0 +1,16 @@
+---
+description: RexMessages project conventions (Electron wrapper for Google Messages for web)
+alwaysApply: true
+---
+
+# RexMessages conventions
+
+- Google DOM selectors live only in `src/preload/selectors.ts`. Never hard-code a Google selector anywhere else.
+- `mainWorld()` in `src/preload/inject.ts` and `swMainWorld()` in `src/preload/sw.ts` are serialized by Electron. They must not reference imports or outer-scope variables.
+- Preload entries (`inject`, `popup`, `gallery`, `sw`) are sandboxed CommonJS bundles. They must not import runtime code from each other (type-only imports from `src/shared/types.ts` are fine), or Rollup will emit a shared chunk that sandboxed preloads can't load.
+- Quick reply must never send unless the open chat is confirmed as the sender's. Fail softly and tell the user.
+- Google's page enforces Trusted Types: never use `innerHTML` in injected code.
+- No Google-account automation (no scripted sign-in or credential handling).
+- Every `ipcMain` handler checks the sender (`isPageSender`, popup or gallery webContents) before acting.
+- Electron 44 clipboard is async (`clipboard.write([new ClipboardItem(...)])`); `writeImage` no longer exists.
+- After significant changes, update `README.md` and `CHANGELOG.md`.

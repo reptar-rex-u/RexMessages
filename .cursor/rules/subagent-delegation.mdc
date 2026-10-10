@@ -1,0 +1,14 @@
+---
+description: When to delegate RexMessages work to project subagents
+alwaysApply: true
+---
+
+# RexMessages subagent delegation
+
+| Agent | Delegate when | Do not delegate when |
+|---|---|---|
+| `messages-inject` | Changing preload scripts, Google DOM selectors, notification capture, quick-reply sending, or photo scraping | Changing tray, menus, window behavior, or packaging |
+| `messages-shell` | Changing the main process: windows, tray, popup positioning, gallery window, menus, settings, IPC, or the installer | Fixing a broken Google selector |
+| `messages-docs` | Updating README or CHANGELOG after a feature change | Making runtime code changes, or Fabric brief MCP writes |
+
+**Fabric brief:** the canonical brief is the Fabric notepad linked from `.cursor/fabric-brief.json`. The parent agent edits it with the `user-fabric` MCP; never delegate that or write a local brief file.

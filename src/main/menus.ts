@@ -4,6 +4,7 @@ import { refreshTrayMenu, getUnread } from './tray'
 import { pushPopupSettings } from './notify'
 import { openGallery } from './gallery'
 import { getMainWindow, showMain } from './windows'
+import { PAIRING_URL } from './paths'
 import { checkForUpdates, getUpdateState, restartToUpdate } from './updater'
 
 const POPUP_DURATIONS = [5, 8, 15, 30]
@@ -68,6 +69,7 @@ export function buildAppMenu(): Menu {
       label: 'File',
       submenu: [
         { label: 'Photo gallery', accelerator: 'CmdOrCtrl+G', click: () => openGallery() },
+        { label: 'Pair with QR code', click: () => void getMainWindow()?.loadURL(PAIRING_URL) },
         { type: 'separator' },
         { label: 'Reload', accelerator: 'CmdOrCtrl+R', click: () => getMainWindow()?.webContents.reload() },
         { label: 'Hide to tray', accelerator: 'CmdOrCtrl+W', click: () => getMainWindow()?.hide() },

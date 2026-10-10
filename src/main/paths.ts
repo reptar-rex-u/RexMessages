@@ -2,6 +2,7 @@ import { app, nativeImage, type NativeImage } from 'electron'
 import { join } from 'node:path'
 
 export const MESSAGES_URL = 'https://messages.google.com/web'
+export const PAIRING_URL = 'https://messages.google.com/web/authentication'
 export const PARTITION = 'persist:messages'
 
 const resourcesDir = app.isPackaged

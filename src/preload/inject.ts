@@ -244,6 +244,23 @@ function mainWorld(S: Selectors): void {
     }
   }, 1500)
 
+  // ---- Pairing -------------------------------------------------------------
+
+  // Turn "Remember this computer" on once per visit to the QR page so pairing
+  // survives restarts. If the user turns it back off, leave it off.
+  let rememberHandled = false
+  setInterval(() => {
+    if (!location.pathname.startsWith(S.authPath)) {
+      rememberHandled = false
+      return
+    }
+    if (rememberHandled) return
+    const sw = q(S.rememberDeviceSwitch)
+    if (!sw) return
+    rememberHandled = true
+    if (sw.getAttribute('aria-checked') === 'false') sw.click()
+  }, 1000)
+
   // ---- Conversations -------------------------------------------------------
 
   function openByName(name: string): boolean {

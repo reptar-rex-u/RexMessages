@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.1 - 2026-10-10
+
+- Opens straight to QR pairing; Google blocks account sign-in in desktop apps, so the Sign in button now explains this and stays on the QR page
+- Turns on **Remember this computer** automatically while pairing
+- New **File > Pair with QR code** menu item
+
 ## 0.1.0 - 2026-10-10
 
 First version.

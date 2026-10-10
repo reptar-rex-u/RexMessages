@@ -4,7 +4,7 @@ Google Messages for web (<https://messages.google.com/web>) wrapped as a real Wi
 
 ## Features
 
-- **Stays signed in.** Pair once with the QR code (or your Google account); the session is kept in its own profile.
+- **Stays signed in.** Pair once with the QR code; the session is kept in its own profile.
 - **Quick reply popups.** New texts show a card in the bottom-right corner with the sender, preview, and a reply box. Press Enter to send; Shift+Enter adds a new line. Cards stack (up to 4), auto-hide after a few seconds, and pause while you hover or type.
 - **Safe sending.** Before sending, the app opens the chat and checks that its header matches the sender. If it can't confirm the chat, or the chat has an unsent draft, nothing is sent and the card says why (use **Open chat** instead).
 - **Tray and badge.** Closing the window hides it to the tray. The tray icon and the taskbar button show the unread count.
@@ -33,7 +33,9 @@ npm install
 npm run dev        # hot-reload development run
 ```
 
-On first launch, click **Sign in** (Google account pairing) or use **Pair with QR code** from your phone: Messages > profile picture > Device pairing.
+On first launch the app opens the QR pairing page. On your phone, open Messages > profile picture > Device pairing > QR code scanner and scan the code. **Remember this computer** is switched on automatically so pairing survives restarts. To pair again later, use **File > Pair with QR code**.
+
+Google blocks Google Account sign-in inside desktop apps ("This browser or app may not be secure"), so the page's **Sign in** button shows a short explanation and stays on the QR page instead.
 
 Other scripts:
 

@@ -2,6 +2,7 @@ import {
   app,
   BrowserWindow,
   clipboard,
+  dialog,
   globalShortcut,
   Menu,
   screen,
@@ -10,7 +11,7 @@ import {
   type MenuItemConstructorOptions,
   type Session
 } from 'electron'
-import { MESSAGES_URL, PARTITION, preload, resource } from './paths'
+import { MESSAGES_URL, PAIRING_URL, PARTITION, preload, resource } from './paths'
 import { flushSettings, getSettings, updateSettings, type WindowBounds } from './store'
 import { setPageTarget } from './page'
 import { getMainWindow, isQuitting, setMainWindow, setQuitting, showMain, toggleMain } from './windows'
@@ -45,6 +46,33 @@ function isGoogleHost(url: string): boolean {
   } catch {
     return false
   }
+}
+
+function isAccountSignIn(url: string): boolean {
+  try {
+    return new URL(url).hostname === 'accounts.google.com'
+  } catch {
+    return false
+  }
+}
+
+let explaining = false
+
+function explainSignIn(win: BrowserWindow): void {
+  if (!win.webContents.getURL().startsWith(PAIRING_URL)) void win.loadURL(PAIRING_URL)
+  if (explaining) return
+  explaining = true
+  void dialog.showMessageBox(win, {
+    type: 'info',
+    title: 'RexMessages',
+    message: 'Pair with the QR code instead',
+    detail:
+      'Google blocks signing in to your Google Account from desktop apps.\n\n' +
+      'On your phone, open Google Messages, tap your profile picture, choose Device pairing, ' +
+      'then QR code scanner, and scan the code in this window.'
+  }).finally(() => {
+    explaining = false
+  })
 }
 
 function openExternal(url: string): void {
@@ -183,25 +211,42 @@ function createMainWindow(startHidden: boolean): BrowserWindow {
     }
   })
 
+  // Google blocks account sign-in inside desktop apps, so send people to QR
+  // pairing instead of letting them hit "This browser or app may not be secure".
+  const toPairing = (url: string): void => {
+    try {
+      if (new URL(url).pathname.startsWith('/web/welcome')) void win.loadURL(PAIRING_URL)
+    } catch {
+      // Ignore malformed URLs.
+    }
+  }
+  win.webContents.on('did-navigate', (_event, url) => {
+    if (isAccountSignIn(url)) explainSignIn(win)
+    else toPairing(url)
+  })
+  win.webContents.on('will-redirect', (event, url, _isInPlace, isMainFrame) => {
+    if (isMainFrame && isAccountSignIn(url)) {
+      event.preventDefault()
+      explainSignIn(win)
+    }
+  })
+  win.webContents.on('did-navigate-in-page', (_event, url, isMainFrame) => {
+    if (isMainFrame) toPairing(url)
+  })
+
   win.webContents.on('will-navigate', (event, url) => {
-    if (!isGoogleHost(url)) {
+    if (isAccountSignIn(url)) {
+      event.preventDefault()
+      explainSignIn(win)
+    } else if (!isGoogleHost(url)) {
       event.preventDefault()
       openExternal(url)
     }
   })
 
   win.webContents.setWindowOpenHandler(({ url }) => {
-    if (isGoogleHost(url) && new URL(url).hostname === 'accounts.google.com') {
-      return {
-        action: 'allow',
-        overrideBrowserWindowOptions: {
-          autoHideMenuBar: true,
-          icon: resource('icon.ico'),
-          webPreferences: { partition: PARTITION, contextIsolation: true, sandbox: true }
-        }
-      }
-    }
-    openExternal(url)
+    if (isAccountSignIn(url)) explainSignIn(win)
+    else openExternal(url)
     return { action: 'deny' }
   })
 

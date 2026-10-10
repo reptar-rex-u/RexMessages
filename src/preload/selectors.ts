@@ -6,6 +6,8 @@
 
 export interface Selectors {
   conversationPath: string
+  authPath: string
+  rememberDeviceSwitch: string[]
   conversationListItem: string[]
   conversationItemName: string[]
   conversationItemLink: string[]
@@ -21,6 +23,13 @@ export interface Selectors {
 
 export const SELECTORS: Selectors = {
   conversationPath: '/conversations/',
+
+  // QR pairing page and its "Remember this computer" switch.
+  authPath: '/web/authentication',
+  rememberDeviceSwitch: [
+    'mat-slide-toggle.local-storage-checkbox button[role="switch"]',
+    '.local-storage-checkbox [role="switch"]'
+  ],
 
   conversationListItem: ['mws-conversation-list-item', '[data-e2e-conversation]'],
   conversationItemName: ['[data-e2e-conversation-name]', '.name', 'h2', 'h3'],

@@ -47,4 +47,21 @@ try {
   process.exit(1)
 }
 
+const changelog = readFileSync('CHANGELOG.md', 'utf8')
+const section = changelog.split(/^## /m).find((s) => s.startsWith(`${version} `) || s.startsWith(`${version}\n`))
+const whatsNew = section ? section.split('\n').slice(1).join('\n').trim() : ''
+const notes = `## Download
+
+**Only download \`RexMessages-Setup-${version}.exe\`.** Run it to install RexMessages; that's all you need. If you already have RexMessages, it updates itself.
+
+The other files are used by the app's automatic updater (\`latest.yml\`, \`.blockmap\`) or added by GitHub (Source code). You don't need to download them.
+
+Windows may show a SmartScreen warning because the installer isn't signed. Click **More info**, then **Run anyway**.
+${whatsNew ? `\n## What's new\n\n${whatsNew}\n` : ''}`
+try {
+  execSync(`gh release edit v${version} --notes-file -`, { input: notes, stdio: ['pipe', 'inherit', 'inherit'] })
+} catch {
+  console.error('Published, but could not set the release notes. Edit them on GitHub.')
+}
+
 console.log(`\nPublished v${version}: https://github.com/reptar-rex-u/RexMessages/releases/tag/v${version}`)

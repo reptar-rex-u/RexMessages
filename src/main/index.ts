@@ -9,9 +9,10 @@ import {
   session,
   shell,
   type MenuItemConstructorOptions,
-  type Session
+  type Session,
+  type WebContents
 } from 'electron'
-import { MESSAGES_URL, PAIRING_URL, PARTITION, preload, resource } from './paths'
+import { MESSAGES_URL, PARTITION, preload, resource } from './paths'
 import { flushSettings, getSettings, updateSettings, type WindowBounds } from './store'
 import { setPageTarget } from './page'
 import { getMainWindow, isQuitting, setMainWindow, setQuitting, showMain, toggleMain } from './windows'
@@ -56,23 +57,67 @@ function isAccountSignIn(url: string): boolean {
   }
 }
 
+function isSignInRejected(url: string): boolean {
+  try {
+    const { hostname, pathname } = new URL(url)
+    return hostname === 'accounts.google.com' && pathname.includes('/rejected')
+  } catch {
+    return false
+  }
+}
+
 let explaining = false
 
-function explainSignIn(win: BrowserWindow): void {
-  if (!win.webContents.getURL().startsWith(PAIRING_URL)) void win.loadURL(PAIRING_URL)
+function explainRejected(win: BrowserWindow): void {
   if (explaining) return
   explaining = true
   void dialog.showMessageBox(win, {
-    type: 'info',
+    type: 'warning',
     title: 'RexMessages',
-    message: 'Pair with the QR code instead',
+    message: 'Google refused the sign-in',
     detail:
-      'Google blocks signing in to your Google Account from desktop apps.\n\n' +
-      'On your phone, open Google Messages, tap your profile picture, choose Device pairing, ' +
-      'then QR code scanner, and scan the code in this window.'
+      'Google sometimes blocks signing in from desktop apps.\n\n' +
+      'Try again in a few minutes, or if your phone offers it, pair with a QR code instead: ' +
+      'File > Pair with QR code, then on your phone open Google Messages > profile picture > ' +
+      'Device pairing > QR code scanner.'
   }).finally(() => {
     explaining = false
   })
+}
+
+// Electron reports itself as plain "Chromium" in client hints, which Google's
+// sign-in rejects. Report the same identity a real Chrome build would.
+function applyChromeIdentity(wc: WebContents): void {
+  const full = process.versions.chrome
+  const major = full.split('.')[0]
+  const brands = [
+    { brand: 'Google Chrome', version: major },
+    { brand: 'Chromium', version: major },
+    { brand: 'Not?A_Brand', version: '24' }
+  ]
+  try {
+    wc.debugger.attach('1.3')
+  } catch {
+    return
+  }
+  wc.debugger
+    .sendCommand('Emulation.setUserAgentOverride', {
+      userAgent: CHROME_UA,
+      platform: 'Win32',
+      userAgentMetadata: {
+        brands,
+        fullVersionList: brands.map((b) => ({ brand: b.brand, version: b.version === '24' ? '24.0.0.0' : full })),
+        fullVersion: full,
+        platform: 'Windows',
+        platformVersion: '19.0.0',
+        architecture: 'x86',
+        model: '',
+        mobile: false,
+        bitness: '64',
+        wow64: false
+      }
+    })
+    .catch((err) => console.warn('Chrome identity override failed:', err))
 }
 
 function openExternal(url: string): void {
@@ -211,41 +256,20 @@ function createMainWindow(startHidden: boolean): BrowserWindow {
     }
   })
 
-  // Google blocks account sign-in inside desktop apps, so send people to QR
-  // pairing instead of letting them hit "This browser or app may not be secure".
-  const toPairing = (url: string): void => {
-    try {
-      if (new URL(url).pathname.startsWith('/web/welcome')) void win.loadURL(PAIRING_URL)
-    } catch {
-      // Ignore malformed URLs.
-    }
-  }
-  win.webContents.on('did-navigate', (_event, url) => {
-    if (isAccountSignIn(url)) explainSignIn(win)
-    else toPairing(url)
-  })
-  win.webContents.on('will-redirect', (event, url, _isInPlace, isMainFrame) => {
-    if (isMainFrame && isAccountSignIn(url)) {
-      event.preventDefault()
-      explainSignIn(win)
-    }
-  })
-  win.webContents.on('did-navigate-in-page', (_event, url, isMainFrame) => {
-    if (isMainFrame) toPairing(url)
-  })
+  applyChromeIdentity(win.webContents)
 
   win.webContents.on('will-navigate', (event, url) => {
-    if (isAccountSignIn(url)) {
-      event.preventDefault()
-      explainSignIn(win)
-    } else if (!isGoogleHost(url)) {
+    if (!isGoogleHost(url)) {
       event.preventDefault()
       openExternal(url)
     }
   })
+  win.webContents.on('did-navigate', (_event, url) => {
+    if (isSignInRejected(url)) explainRejected(win)
+  })
 
   win.webContents.setWindowOpenHandler(({ url }) => {
-    if (isAccountSignIn(url)) explainSignIn(win)
+    if (isAccountSignIn(url)) void win.loadURL(url)
     else openExternal(url)
     return { action: 'deny' }
   })

@@ -4,7 +4,7 @@ Google Messages for web (<https://messages.google.com/web>) wrapped as a real Wi
 
 ## Features
 
-- **Stays signed in.** Pair once with the QR code; the session is kept in its own profile.
+- **Stays signed in.** Sign in with your Google account (or pair with a QR code) once; the session is kept in its own profile.
 - **Quick reply popups.** New texts show a card in the bottom-right corner with the sender, preview, and a reply box. Press Enter to send; Shift+Enter adds a new line. Cards stack (up to 4), auto-hide after a few seconds, and pause while you hover or type.
 - **Safe sending.** Before sending, the app opens the chat and checks that its header matches the sender. If it can't confirm the chat, or the chat has an unsent draft, nothing is sent and the card says why (use **Open chat** instead).
 - **Tray and badge.** Closing the window hides it to the tray. The tray icon and the taskbar button show the unread count.
@@ -33,9 +33,9 @@ npm install
 npm run dev        # hot-reload development run
 ```
 
-On first launch the app opens the QR pairing page. On your phone, open Messages > profile picture > Device pairing > QR code scanner and scan the code. **Remember this computer** is switched on automatically so pairing survives restarts. To pair again later, use **File > Pair with QR code**.
+On first launch, click **Sign in** and sign in to the same Google account your phone's Messages app uses (newer phones only offer this Google Account pairing). If your phone shows a **QR code scanner** under Device pairing, you can use **File > Pair with QR code** instead; **Remember this computer** is switched on automatically.
 
-Google blocks Google Account sign-in inside desktop apps ("This browser or app may not be secure"), so the page's **Sign in** button shows a short explanation and stays on the QR page instead.
+Google refuses sign-in from browsers it doesn't recognize ("This browser or app may not be secure"). Electron normally reports itself as plain Chromium, so the main window reports the same Chrome identity (user agent, client hints, `window.chrome`) a real Chrome build would. You type your password into Google's own page; the app never reads or stores it. If Google still refuses, the app shows a short explanation.
 
 Other scripts:
 

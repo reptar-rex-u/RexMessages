@@ -5,7 +5,10 @@ type CommandHandler = (cmd: string, payload: unknown) => Promise<unknown>
 
 let handler: CommandHandler | null = null
 
-contextBridge.exposeInMainWorld('__rexBridge', {
+// Google's sign-in pages must see an untouched browser.
+const onMessages = location.hostname === 'messages.google.com'
+
+if (onMessages) contextBridge.exposeInMainWorld('__rexBridge', {
   notify: (data: { id: number; sender: string; body: string; icon?: string; tag?: string }) => {
     ipcRenderer.send('page:notify', {
       id: Number(data?.id) || 0,
@@ -410,4 +413,39 @@ function mainWorld(S: Selectors): void {
   })
 }
 
-contextBridge.executeInMainWorld({ func: mainWorld, args: [SELECTORS] })
+if (onMessages) contextBridge.executeInMainWorld({ func: mainWorld, args: [SELECTORS] })
+
+// Electron leaves window.chrome empty; Google's sign-in expects the members a
+// real Chrome has. Serialized like mainWorld().
+if (location.hostname === 'accounts.google.com') {
+  contextBridge.executeInMainWorld({
+    func: () => {
+      const c = ((window as any).chrome ??= {})
+      const start = performance.timeOrigin / 1000
+      c.app ??= {
+        isInstalled: false,
+        InstallState: { DISABLED: 'disabled', INSTALLED: 'installed', NOT_INSTALLED: 'not_installed' },
+        RunningState: { CANNOT_RUN: 'cannot_run', READY_TO_RUN: 'ready_to_run', RUNNING: 'running' },
+        getDetails: () => null,
+        getIsInstalled: () => false,
+        runningState: () => 'cannot_run'
+      }
+      c.csi ??= () => ({ startE: Math.round(start * 1000), onloadT: Date.now(), pageT: performance.now(), tran: 15 })
+      c.loadTimes ??= () => ({
+        requestTime: start,
+        startLoadTime: start,
+        commitLoadTime: start,
+        finishDocumentLoadTime: 0,
+        finishLoadTime: 0,
+        firstPaintTime: 0,
+        firstPaintAfterLoadTime: 0,
+        navigationType: 'Other',
+        wasFetchedViaSpdy: true,
+        wasNpnNegotiated: true,
+        npnNegotiatedProtocol: 'h2',
+        wasAlternateProtocolAvailable: false,
+        connectionInfo: 'h2'
+      })
+    }
+  })
+}

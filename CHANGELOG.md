@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.2 - 2026-10-10
+
+- Google Account sign-in works: the window reports a full Google Chrome identity (client hints and `window.chrome`), which Google's sign-in requires
+- The Sign in button is back; QR pairing stays available under **File > Pair with QR code**
+- RexMessages page hooks no longer run on Google's sign-in pages
+- Shows an explanation if Google still rejects the sign-in
+
 ## 0.1.1 - 2026-10-10
 
 - Opens straight to QR pairing; Google blocks account sign-in in desktop apps, so the Sign in button now explains this and stays on the QR page

@@ -11,6 +11,7 @@ alwaysApply: true
 - Quick reply must never send unless the open chat is confirmed as the sender's. Fail softly and tell the user.
 - Google's page enforces Trusted Types: never use `innerHTML` in injected code.
 - No Google-account automation (no scripted sign-in or credential handling).
+- Keep `applyChromeIdentity()` in `src/main/index.ts` and the `window.chrome` members in `inject.ts`: without the "Google Chrome" client-hint brand, Google rejects sign-in as "This browser or app may not be secure". Never run the RexMessages hooks on `accounts.google.com`.
 - Every `ipcMain` handler checks the sender (`isPageSender`, popup or gallery webContents) before acting.
 - Electron 44 clipboard is async (`clipboard.write([new ClipboardItem(...)])`); `writeImage` no longer exists.
 - After significant changes, update `README.md` and `CHANGELOG.md`.

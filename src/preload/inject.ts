@@ -19,10 +19,15 @@ if (onMessages) contextBridge.exposeInMainWorld('__rexBridge', {
     })
   },
   closed: (id: number) => ipcRenderer.send('page:closed', Number(id) || 0),
+  click: (x: number, y: number): Promise<boolean> => ipcRenderer.invoke('page:click', { x: Number(x), y: Number(y) }),
   unread: (count: number) => ipcRenderer.send('page:unread', Number(count) || 0),
   register: (fn: CommandHandler) => {
     if (!handler) handler = fn
   }
+})
+
+ipcRenderer.on('page:focus', (_event, focused: boolean) => {
+  window.dispatchEvent(new Event(focused ? 'rex-window-focus' : 'rex-window-blur'))
 })
 
 ipcRenderer.on('page:command', async (_event, msg: { reqId: number; cmd: string; payload: unknown }) => {
@@ -73,12 +78,27 @@ function mainWorld(S: Selectors): void {
     return []
   }
 
+  // First match that is actually laid out on the page.
+  const qv = (list: string[], root: ParentNode = document): HTMLElement | null => {
+    for (const sel of list) {
+      try {
+        for (const el of Array.from(root.querySelectorAll<HTMLElement>(sel))) {
+          if (el.getClientRects().length) return el
+        }
+      } catch {
+        // Ignore and try the next selector.
+      }
+    }
+    return null
+  }
+
   const text = (el: Element | null | undefined): string => (el?.textContent || '').replace(/\s+/g, ' ').trim()
   const norm = (s: string): string => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '')
+  // Exact after dropping emoji and punctuation, so "Alexis" never matches the
+  // group "Alexis, Mom".
   const namesMatch = (a: string, b: string): boolean => {
     const x = norm(a)
-    const y = norm(b)
-    return !!x && !!y && (x === y || x.includes(y) || y.includes(x))
+    return !!x && x === norm(b)
   }
 
   async function waitFor<T>(fn: () => T | null | undefined | false, timeout: number, interval = 100): Promise<T | null> {
@@ -235,6 +255,21 @@ function mainWorld(S: Selectors): void {
     }
   }
 
+  // ---- Window focus --------------------------------------------------------
+
+  let windowFocused = false
+  const realHasFocus = Document.prototype.hasFocus
+  Document.prototype.hasFocus = function (this: Document): boolean {
+    return windowFocused && realHasFocus.call(this)
+  }
+  const setFocus = (focused: boolean): void => {
+    if (focused === windowFocused) return
+    windowFocused = focused
+    window.dispatchEvent(new FocusEvent(focused ? 'focus' : 'blur'))
+  }
+  window.addEventListener('rex-window-focus', () => setFocus(true))
+  window.addEventListener('rex-window-blur', () => setFocus(false))
+
   // ---- Unread count --------------------------------------------------------
 
   let lastUnread = -1
@@ -267,14 +302,10 @@ function mainWorld(S: Selectors): void {
   // ---- Conversations -------------------------------------------------------
 
   function openByName(name: string): boolean {
-    for (const item of qa(S.conversationListItem)) {
-      const nameEl = q(S.conversationItemName, item)
-      if (nameEl && namesMatch(text(nameEl), name)) {
-        ;(q(S.conversationItemLink, item) || item).click()
-        return true
-      }
-    }
-    return false
+    const matches = qa(S.conversationListItem).filter((item) => namesMatch(text(q(S.conversationItemName, item)), name))
+    if (matches.length !== 1) return false
+    ;(q(S.conversationItemLink, matches[0]) || matches[0]).click()
+    return true
   }
 
   function activate(id: number, sender: string): boolean {
@@ -292,13 +323,20 @@ function mainWorld(S: Selectors): void {
 
   function setText(box: HTMLElement, msg: string): void {
     box.focus()
+    if (box.isContentEditable) {
+      const range = document.createRange()
+      range.selectNodeContents(box)
+      const sel = window.getSelection()
+      sel?.removeAllRanges()
+      sel?.addRange(range)
+    }
     let ok = false
     try {
       ok = document.execCommand('insertText', false, msg)
     } catch {
       ok = false
     }
-    if (ok && valueOf(box) === msg) return
+    if (ok && valueOf(box).trim() === msg.trim()) return
     if (box instanceof HTMLTextAreaElement || box instanceof HTMLInputElement) {
       const setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(box), 'value')?.set
       if (setter) setter.call(box, msg)
@@ -311,7 +349,6 @@ function mainWorld(S: Selectors): void {
   }
 
   async function reply(p: { id: number; sender: string; text: string }): Promise<{ ok: boolean; error?: string }> {
-    const startUrl = location.href
     const realFocus = window.focus
     window.focus = () => {}
     try {
@@ -322,32 +359,40 @@ function mainWorld(S: Selectors): void {
       }, 2000)
     }
 
-    const box = await waitFor(() => inConversation() && q(S.composeInput), 8000)
+    const box = await waitFor(() => inConversation() && qv(S.composeInput), 8000)
     if (!box) throw new Error('The reply box did not appear')
 
-    const confirmed = await waitFor(() => {
+    const isSenderChat = (): boolean => {
       const h = q(S.headerName)
       return !!h && namesMatch(text(h), p.sender)
-    }, 4000)
-    if (!confirmed) {
-      const h = q(S.headerName)
-      if (h) throw new Error(`Opened "${text(h)}" instead of ${p.sender}, so nothing was sent`)
-      if (location.href === startUrl) throw new Error("Couldn't confirm the conversation, so nothing was sent")
     }
+    if (!(await waitFor(isSenderChat, 4000))) {
+      const h = q(S.headerName)
+      throw new Error(
+        h ? `Opened "${text(h)}" instead of ${p.sender}, so nothing was sent` : "Couldn't confirm the conversation, so nothing was sent"
+      )
+    }
+    // Google sometimes reopens the last chat right after load; let it settle.
+    await sleep(400)
+    const chatPath = location.pathname
+    const stillSenderChat = (): boolean => location.pathname === chatPath && isSenderChat()
+    if (!stillSenderChat()) throw new Error('The conversation changed while opening, so nothing was sent')
 
-    const input = q(S.composeInput)!
+    const input = qv(S.composeInput) || box
     if (valueOf(input).trim()) throw new Error('That chat has an unsent draft, so nothing was sent')
     setText(input, p.text)
     await sleep(150)
 
     const btn = await waitFor(() => {
-      const b = q(S.sendButton) as HTMLButtonElement | null
+      const b = qv(S.sendButton) as HTMLButtonElement | null
       return b && !b.disabled && b.getAttribute('aria-disabled') !== 'true' ? b : null
     }, 3000)
-    if (btn) btn.click()
-    else input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }))
+    if (!btn) throw new Error('The send button did not become ready; your text is in the chat')
+    if (!stillSenderChat()) throw new Error('The conversation changed before sending; your text may be left as a draft')
+    const r = btn.getBoundingClientRect()
+    if (!(await bridge.click(r.left + r.width / 2, r.top + r.height / 2))) throw new Error("Couldn't press Send")
 
-    const sent = await waitFor(() => valueOf(q(S.composeInput)).trim() === '', 6000)
+    const sent = await waitFor(() => stillSenderChat() && valueOf(qv(S.composeInput) || input).trim() === '', 6000)
     if (!sent) throw new Error('Send did not go through; your text is still in the reply box')
     return { ok: true }
   }

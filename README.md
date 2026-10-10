@@ -85,6 +85,10 @@ service worker           --(preload sw.ts)------>  main process
 - `src/preload/selectors.ts` - **every Google DOM selector, in one file**
 - `src/renderer/popup/`, `src/renderer/gallery/` - popup and gallery UIs (plain TypeScript, no framework)
 
+Quick reply only sends after the chat header exactly matches the sender (emoji and punctuation ignored, so "Alexis" never matches the group "Alexis, Mom"). Google ignores script clicks on its Send button, so the page asks the main process to press it with a real input event, then checks the same chat is still open and the reply box cleared.
+
+While the window is hidden, the page is told it doesn't have focus; otherwise Google assumes you're reading the chat and skips notifications. After Google Account sign-in the app remembers the account address (`/web/u/0/`) and opens it on startup.
+
 Settings are saved in `%APPDATA%\RexMessages\settings.json`. The Google session lives in the app's `persist:messages` profile under the same folder.
 
 ## When Google changes their site

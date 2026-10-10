@@ -21,6 +21,25 @@ ipcMain.on('page:result', (event, msg: { reqId: number; ok: boolean; result?: un
   else p.reject(new Error(msg.error || 'Page command failed'))
 })
 
+// Google's send button ignores script-dispatched clicks, so the page asks for a
+// real input event at the button's position.
+ipcMain.handle('page:click', async (event, p: { x: number; y: number }): Promise<boolean> => {
+  if (event.sender !== target) return false
+  const x = Number(p?.x)
+  const y = Number(p?.y)
+  if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || y < 0) return false
+  const wc = event.sender
+  if (wc.debugger.isAttached()) {
+    for (const type of ['mousePressed', 'mouseReleased']) {
+      await wc.debugger.sendCommand('Input.dispatchMouseEvent', { type, x, y, button: 'left', clickCount: 1 })
+    }
+  } else {
+    wc.sendInputEvent({ type: 'mouseDown', x, y, button: 'left', clickCount: 1 })
+    wc.sendInputEvent({ type: 'mouseUp', x, y, button: 'left', clickCount: 1 })
+  }
+  return true
+})
+
 export function setPageTarget(wc: WebContents): void {
   target = wc
 }

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.3 - 2026-10-10
+
+- Popups now appear when RexMessages starts hidden or sits in the tray: the page is told the window isn't focused, so Google raises notifications
+- Quick reply works again: it uses Google's visible reply box and Send button (Google added hidden duplicates) and presses Send with a real click
+- Quick reply confirms the new chat header and only succeeds if the same chat is still open and the box cleared
+- Exact name matching, so a reply to "Alexis" can never go to the group "Alexis, Mom"
+- Remembers the Google account address (`/web/u/0/`) after sign-in and opens it on startup
+
 ## 0.1.2 - 2026-10-10
 
 - Google Account sign-in works: the window reports a full Google Chrome identity (client hints and `window.chrome`), which Google's sign-in requires

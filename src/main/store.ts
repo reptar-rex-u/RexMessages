@@ -16,6 +16,8 @@ export interface Settings {
   sound: boolean
   popupSeconds: number
   startWithWindows: boolean
+  /** Google account slot after account sign-in, e.g. "/web/u/0/"; empty for QR pairing. */
+  accountPath: string
 }
 
 const defaults: Settings = {
@@ -24,7 +26,8 @@ const defaults: Settings = {
   doNotDisturb: false,
   sound: true,
   popupSeconds: 8,
-  startWithWindows: false
+  startWithWindows: false,
+  accountPath: ''
 }
 
 const file = join(app.getPath('userData'), 'settings.json')

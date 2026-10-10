@@ -41,13 +41,18 @@ export const SELECTORS: Selectors = {
   ],
 
   headerName: [
+    'mw-conversation-header mws-header h2',
+    'mw-conversation-header h2',
     'mws-conversation-header [data-e2e-conversation-name]',
     'mws-conversation-header h2',
     'mws-conversation-header .title',
     '[data-e2e-conversation-header] [data-e2e-conversation-name]'
   ],
 
+  // Google keeps a hidden textarea next to the visible contenteditable box, and
+  // a hidden duplicate send button; inject.ts only uses visible matches.
   composeInput: [
+    '[contenteditable="true"][data-e2e-message-input-box]',
     'textarea[data-e2e-message-input-box]',
     'mws-message-compose textarea',
     'mws-autosize-textarea textarea',

@@ -5,6 +5,24 @@ export const MESSAGES_URL = 'https://messages.google.com/web'
 export const PAIRING_URL = 'https://messages.google.com/web/authentication'
 export const PARTITION = 'persist:messages'
 
+/** Plain /web never loads chats for account sign-in; it needs the /web/u/N/ slot. */
+export function startUrl(accountPath: string): string {
+  return /^\/web\/u\/\d+\/$/.test(accountPath) ? `https://messages.google.com${accountPath}conversations` : MESSAGES_URL
+}
+
+/** "/web/u/N/" while signed in with a Google account, "" once back on pairing, null otherwise. */
+export function accountPathOf(url: string): string | null {
+  try {
+    const { hostname, pathname } = new URL(url)
+    if (hostname !== 'messages.google.com') return null
+    const slot = /^\/web\/u\/\d+\//.exec(pathname)
+    if (slot) return slot[0]
+    return /^\/web\/(welcome|authentication)/.test(pathname) ? '' : null
+  } catch {
+    return null
+  }
+}
+
 const resourcesDir = app.isPackaged
   ? join(process.resourcesPath, 'resources')
   : join(app.getAppPath(), 'resources')

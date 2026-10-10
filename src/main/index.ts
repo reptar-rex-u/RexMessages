@@ -12,10 +12,10 @@ import {
   type Session,
   type WebContents
 } from 'electron'
-import { MESSAGES_URL, PARTITION, preload, resource } from './paths'
+import { accountPathOf, PARTITION, preload, resource, startUrl } from './paths'
 import { flushSettings, getSettings, updateSettings, type WindowBounds } from './store'
 import { setPageTarget } from './page'
-import { getMainWindow, isQuitting, setMainWindow, setQuitting, showMain, toggleMain } from './windows'
+import { getMainWindow, isMainActive, isQuitting, setMainWindow, setQuitting, showMain, toggleMain } from './windows'
 import { createTray, destroyTray, reapplyBadge, trayBalloon } from './tray'
 import { initUpdater, restartToUpdate } from './updater'
 import { applyLoginItem, buildTrayMenu, refreshMenus } from './menus'
@@ -264,8 +264,26 @@ function createMainWindow(startHidden: boolean): BrowserWindow {
       openExternal(url)
     }
   })
+  const rememberAccount = (url: string): void => {
+    const path = accountPathOf(url)
+    if (path !== null && path !== getSettings().accountPath) updateSettings({ accountPath: path })
+  }
   win.webContents.on('did-navigate', (_event, url) => {
     if (isSignInRejected(url)) explainRejected(win)
+    rememberAccount(url)
+  })
+
+  // A hidden window still reports document.hasFocus() === true, and Google
+  // skips notifications while it thinks the chat is in front of the user.
+  const sendFocus = (): void => {
+    if (!win.isDestroyed()) win.webContents.send('page:focus', isMainActive())
+  }
+  for (const name of ['show', 'hide', 'focus', 'blur', 'minimize', 'restore'] as const) {
+    win.on(name as 'show', sendFocus)
+  }
+  win.webContents.on('dom-ready', sendFocus)
+  win.webContents.on('did-navigate-in-page', (_event, url, isMainFrame) => {
+    if (isMainFrame) rememberAccount(url)
   })
 
   win.webContents.setWindowOpenHandler(({ url }) => {
@@ -275,7 +293,7 @@ function createMainWindow(startHidden: boolean): BrowserWindow {
   })
 
   attachContextMenu(win, ses)
-  void win.loadURL(MESSAGES_URL)
+  void win.loadURL(startUrl(settings.accountPath))
   return win
 }
 

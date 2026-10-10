@@ -67,6 +67,7 @@ Installed copies check [GitHub Releases](https://github.com/reptar-rex-u/RexMess
    npm run release -- minor     # 0.1.0 -> 0.2.0
    npm run release -- major     # 0.1.0 -> 1.0.0
    npm run release -- current   # publish the version already in package.json
+   npm run release -- notes     # only rewrite the current release's notes
    ```
 
 The script bumps the version, commits and tags it, builds the installer, uploads it to a new GitHub Release, and pushes. It uses your `gh auth login` token (or `GH_TOKEN`). Add a line to `CHANGELOG.md` before releasing.

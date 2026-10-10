@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.4 - 2026-10-10
+
+- Update checks start 5 seconds after launch instead of 15
+- A ready update now asks **Restart now** / **Later** in a dialog; the old tray balloon was often hidden by Windows 11
+
 ## 0.1.3 - 2026-10-10
 
 - Popups now appear when RexMessages starts hidden or sits in the tray: the page is told the window isn't focused, so Google raises notifications

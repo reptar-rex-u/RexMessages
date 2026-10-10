@@ -16,8 +16,8 @@ import { accountPathOf, PARTITION, preload, resource, startUrl } from './paths'
 import { flushSettings, getSettings, updateSettings, type WindowBounds } from './store'
 import { setPageTarget } from './page'
 import { getMainWindow, isMainActive, isQuitting, setMainWindow, setQuitting, showMain, toggleMain } from './windows'
-import { createTray, destroyTray, reapplyBadge, trayBalloon } from './tray'
-import { initUpdater, restartToUpdate } from './updater'
+import { createTray, destroyTray, reapplyBadge } from './tray'
+import { initUpdater } from './updater'
 import { applyLoginItem, buildTrayMenu, refreshMenus } from './menus'
 import { attachServiceWorkerNotifications, createPopupWindow } from './notify'
 import { openGallery } from './gallery'
@@ -309,16 +309,7 @@ if (!app.requestSingleInstanceLock()) {
     createTray(buildTrayMenu)
     createPopupWindow()
     if (app.isPackaged) applyLoginItem(getSettings().startWithWindows)
-    initUpdater((state) => {
-      refreshMenus()
-      if (state.status === 'ready') {
-        trayBalloon(
-          'RexMessages update ready',
-          `Version ${state.version} will install when you quit. Click to restart now.`,
-          restartToUpdate
-        )
-      }
-    })
+    initUpdater(() => refreshMenus())
     if (!globalShortcut.register(TOGGLE_HOTKEY, toggleMain)) {
       console.warn(`Could not register ${TOGGLE_HOTKEY}; another app may be using it`)
     }

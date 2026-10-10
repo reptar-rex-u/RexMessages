@@ -55,7 +55,7 @@ Download `RexMessages-Setup-<version>.exe` from the [latest release](https://git
 
 ## Updates
 
-Installed copies check [GitHub Releases](https://github.com/reptar-rex-u/RexMessages/releases) 15 seconds after starting and every 4 hours. New versions download in the background. When one is ready, a tray notification appears; click it (or Help > Restart to update) to install now, or it installs the next time you quit. Help > Check for updates checks on demand. The update log is `%APPDATA%\RexMessages\updater.log`.
+Installed copies check [GitHub Releases](https://github.com/reptar-rex-u/RexMessages/releases) 5 seconds after starting and every 4 hours. New versions download in the background. When one is ready, a dialog asks **Restart now** or **Later**; Later installs it the next time you quit (Help > Restart to update also works). Help > Check for updates checks on demand. The update log is `%APPDATA%\RexMessages\updater.log`.
 
 ### Publishing an update
 

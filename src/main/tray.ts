@@ -56,13 +56,6 @@ export function setUnread(count: number): void {
   refreshTrayMenu()
 }
 
-export function trayBalloon(title: string, content: string, onClick?: () => void): void {
-  if (!tray) return
-  tray.removeAllListeners('balloon-click')
-  if (onClick) tray.once('balloon-click', onClick)
-  tray.displayBalloon({ title, content, iconType: 'info' })
-}
-
 export function reapplyBadge(): void {
   const win = getMainWindow()
   if (win && unread) win.setOverlayIcon(badge(unread), `${unread} unread`)

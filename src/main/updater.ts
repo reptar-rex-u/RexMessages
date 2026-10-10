@@ -5,7 +5,7 @@ import { autoUpdater } from 'electron-updater'
 import { setQuitting } from './windows'
 
 const CHECK_EVERY_MS = 4 * 60 * 60 * 1000
-const FIRST_CHECK_DELAY_MS = 15 * 1000
+const FIRST_CHECK_DELAY_MS = 5 * 1000
 
 export type UpdateState =
   | { status: 'idle' }
@@ -72,6 +72,7 @@ export function initUpdater(changed: (state: UpdateState) => void): void {
   autoUpdater.on('update-downloaded', (info) => {
     manualCheck = false
     setState({ status: 'ready', version: info.version })
+    promptRestart(info.version)
   })
   autoUpdater.on('error', (err) => {
     setState({ status: 'error', message: err?.message ?? String(err) })
@@ -113,6 +114,27 @@ export async function checkForUpdates(manual: boolean): Promise<void> {
   } catch {
     // Reported through the 'error' event.
   }
+}
+
+// Windows 11 often hides tray balloons, so ask with a dialog, once per version.
+let promptedVersion = ''
+function promptRestart(version: string): void {
+  if (promptedVersion === version) return
+  promptedVersion = version
+  void dialog
+    .showMessageBox({
+      type: 'info',
+      title: 'RexMessages',
+      message: `RexMessages ${version} is ready to install`,
+      detail: `You have version ${app.getVersion()}. Restart now to update, or it will install the next time you quit.`,
+      buttons: ['Restart now', 'Later'],
+      defaultId: 0,
+      cancelId: 1,
+      noLink: true
+    })
+    .then(({ response }) => {
+      if (response === 0) restartToUpdate()
+    })
 }
 
 export function restartToUpdate(): void {

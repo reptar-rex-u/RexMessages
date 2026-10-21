@@ -54,3 +54,5 @@ export type PageCommand =
   | { cmd: 'reply'; payload: { id: number; sender: string; text: string } }
   | { cmd: 'open'; payload: { id: number; sender: string } }
   | { cmd: 'collectPhotos'; payload: { older: boolean } }
+  | { cmd: 'listNotes'; payload: { conversation: string; scroll: number; limit: number; before?: string } }
+  | { cmd: 'deleteNotes'; payload: { conversation: string; ids: string[]; texts: string[] } }

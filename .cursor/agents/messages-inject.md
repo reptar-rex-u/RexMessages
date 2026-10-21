@@ -8,7 +8,7 @@ You work on the code that runs inside Google Messages for web.
 ## Key files
 
 - `src/preload/selectors.ts` - the only place Google selectors may live (lists tried in order; add new ones at the top)
-- `src/preload/inject.ts` - page preload: `__rexBridge`, `page:command` handling, and `mainWorld()` (Notification override, unread watcher, `reply`, `collectPhotos`, `activate`/`openByName`)
+- `src/preload/inject.ts` - page preload: `__rexBridge`, `page:command` handling, and `mainWorld()` (Notification override, unread watcher, `reply`, `collectPhotos`, `listNotes`, `deleteNotes`, `activate`/`openByName`)
 - `src/preload/sw.ts` - service-worker preload; `swMainWorld()` replaces `showNotification`
 - `src/shared/types.ts` - `PageCommand`, `PagePhotoSet`, `ReplyResult`
 
@@ -17,6 +17,7 @@ You work on the code that runs inside Google Messages for web.
 - `mainWorld()` and `swMainWorld()` are serialized by Electron: no imports, no outer-scope references, no class field syntax that a bundler could turn into helpers.
 - Never use `innerHTML` (Google enforces Trusted Types).
 - Quick reply must confirm the chat header matches the sender, or the URL changed when there is no header. It must refuse when a draft exists. It never sends on a guess.
+- Notes delete must confirm the open header matches the requested conversation and must use that message's own menu. Never click the conversation-row menu (it can trash the whole chat).
 - Preload entries must not import runtime code from one another.
 
 ## Verify

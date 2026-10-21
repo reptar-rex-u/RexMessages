@@ -48,6 +48,32 @@ export function isPageSender(wc: WebContents): boolean {
   return wc === target
 }
 
+export function isPageLoaded(): boolean {
+  return !!target && !target.isDestroyed()
+}
+
+// Menus and confirmations need a real key, same as Send needs a real click.
+// Only Escape is allowed: this must not type into the compose box.
+ipcMain.handle('page:key', async (event, p: { key: string }): Promise<boolean> => {
+  if (event.sender !== target) return false
+  if (p?.key !== 'Escape') return false
+  const wc = event.sender
+  try {
+    if (wc.debugger.isAttached()) {
+      const spec = { key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27, nativeVirtualKeyCode: 27 }
+      await wc.debugger.sendCommand('Input.dispatchKeyEvent', { type: 'keyDown', ...spec })
+      await wc.debugger.sendCommand('Input.dispatchKeyEvent', { type: 'keyUp', ...spec })
+    } else {
+      wc.sendInputEvent({ type: 'keyDown', keyCode: 'Escape' })
+      wc.sendInputEvent({ type: 'keyUp', keyCode: 'Escape' })
+    }
+    return true
+  } catch (err) {
+    console.warn('page:key failed', err)
+    return false
+  }
+})
+
 export function runPageCommand<T>(command: PageCommand, timeoutMs = 20000): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     if (!target || target.isDestroyed()) {

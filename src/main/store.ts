@@ -18,6 +18,8 @@ export interface Settings {
   startWithWindows: boolean
   /** Google account slot after account sign-in, e.g. "/web/u/0/"; empty for QR pairing. */
   accountPath: string
+  /** Loopback notes API port. 0 turns the API off. */
+  notesApiPort: number
 }
 
 const defaults: Settings = {
@@ -27,7 +29,8 @@ const defaults: Settings = {
   sound: true,
   popupSeconds: 8,
   startWithWindows: false,
-  accountPath: ''
+  accountPath: '',
+  notesApiPort: 5190
 }
 
 const file = join(app.getPath('userData'), 'settings.json')

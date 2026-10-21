@@ -21,6 +21,7 @@ import { initUpdater } from './updater'
 import { applyLoginItem, buildTrayMenu, refreshMenus } from './menus'
 import { attachServiceWorkerNotifications, createPopupWindow } from './notify'
 import { openGallery } from './gallery'
+import { startNotesApi, stopNotesApi } from './notesApi'
 import { cleanupTemp } from './photos'
 
 const TOGGLE_HOTKEY = 'CommandOrControl+Alt+M'
@@ -310,6 +311,7 @@ if (!app.requestSingleInstanceLock()) {
     createPopupWindow()
     if (app.isPackaged) applyLoginItem(getSettings().startWithWindows)
     initUpdater(() => refreshMenus())
+    startNotesApi()
     if (!globalShortcut.register(TOGGLE_HOTKEY, toggleMain)) {
       console.warn(`Could not register ${TOGGLE_HOTKEY}; another app may be using it`)
     }
@@ -321,6 +323,7 @@ if (!app.requestSingleInstanceLock()) {
   })
 
   app.on('will-quit', () => {
+    stopNotesApi()
     globalShortcut.unregisterAll()
     destroyTray()
     cleanupTemp()

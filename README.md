@@ -18,6 +18,7 @@ Google Messages for web (<https://messages.google.com/web>) wrapped as a real Wi
 - **Options** (menu bar or tray): Do not disturb, notification sound, popup duration (5/8/15/30 s), Start with Windows.
 - **Global hotkey:** `Ctrl+Alt+M` shows or hides the window from anywhere.
 - Spellcheck with suggestions, plus a right-click menu for copying photos and links. External links open in your default browser.
+- **Local notes API.** While the app is running, an assistant can read and delete messages in the My Notes conversation over `127.0.0.1` port 5190. Details below.
 
 ## Requirements
 
@@ -46,6 +47,7 @@ Other scripts:
 | `npm run dist` | Build the Windows installer into `release/` (no upload) |
 | `npm run release` | Bump the version and publish an update to GitHub Releases |
 | `npm run build:icons` | Regenerate icons in `resources/` |
+| `npm test` | Test the notes API without a Google account |
 
 ## Install
 
@@ -72,15 +74,52 @@ Installed copies check [GitHub Releases](https://github.com/reptar-rex-u/RexMess
 
 The script bumps the version, commits and tags it, builds the installer, uploads it to a new GitHub Release, and pushes. It uses your `gh auth login` token (or `GH_TOKEN`). Add a line to `CHANGELOG.md` before releasing.
 
+## Local notes API
+
+RexMessages keeps no message store of its own. The API reads and deletes by driving the Google Messages page already open in the app: it opens the named conversation, and a delete uses that message's own menu, then Delete, then confirm.
+
+It listens on **127.0.0.1** port **5190** only. `notesApiPort` in `%APPDATA%\RexMessages\settings.json` changes the port. Set it to `0` to turn the API off. Restart the app after changing it.
+
+On first launch the app writes a token to `%APPDATA%\RexMessages\notes-api.token`. Send it on every request as `Authorization: Bearer <token>`. The token stays in that file (not in the repo and not in the log). Actions are appended to `%APPDATA%\RexMessages\notes-api.log`.
+
+Call `http://127.0.0.1:5190`, not `localhost`. Localhost may try IPv6 first, and this port is IPv4 loopback only.
+
+```powershell
+$token = (Get-Content "$env:APPDATA\RexMessages\notes-api.token" -Raw).Trim()
+curl.exe -H "Authorization: Bearer $token" http://127.0.0.1:5190/health
+curl.exe -H "Authorization: Bearer $token" "http://127.0.0.1:5190/notes?conversation=My%20Notes"
+curl.exe -H "Authorization: Bearer $token" "http://127.0.0.1:5190/notes?conversation=My%20Notes&scroll=3&limit=50"
+curl.exe -H "Authorization: Bearer $token" -H "Content-Type: application/json" -d "{\"ids\":[\"PASTE-ID\"]}" http://127.0.0.1:5190/notes/delete
+```
+
+| Request | What it does |
+| --- | --- |
+| `GET /health` | `{ "ok": true, "service": "rexmessages", "port": 5190, "pageLoaded": true }` |
+| `GET /notes` | Messages in one conversation, newest first. `conversation` defaults to `My Notes`. |
+| `POST /notes/delete` | Deletes exact messages in that conversation. Body is `{ "ids": ["..."] }`, `{ "text": "exact text" }`, or both (`texts` is the list form). |
+
+Each message has `id`, `text`, `urls`, and `timestamp` / `timeLabel` when the page shows a time. `scroll` (0–30) is how many times to jump to the top first so Google loads older messages, the same idea as Load older in the gallery. `limit` (1–200, default 50) is the page size. Pass the last id from the previous response as `before` to get the next older page. `mayHaveOlder` means more history may still be above. `cursorFound` is false when that `before` id was not in the loaded history.
+
+A text match is the full `text` field, case-sensitive. It is not a substring. If that text matches more than one loaded message, or the chat has not been scrolled to the top (so a duplicate might still be hidden), that item is skipped and nothing else is guessed. The response has one result per id and per text.
+
+`conversation` always defaults to `My Notes`. It is never "whichever chat is open." If the open chat has an unsent draft, the API leaves it alone and changes nothing. Delete will not use the conversation-row menu, and it will not confirm a dialog that deletes the whole conversation.
+
+Ids starting with `local:` are a hash of the text and time label. The page often has no stable message id. When `data-message-id`, `msg-id`, or `data-msg-id` is present and looks stable, the id starts with `dom:`. Two messages with the same text and the same time label share an id, and delete refuses that as ambiguous.
+
+Reading or deleting opens that conversation. The window can stay in the tray. If a delete says the message menu could not be pressed, show the RexMessages window and try again.
+
+`npm test` checks the API without Google: token, exact matching, and the loopback server.
+
 ## How it works
 
 ```
 messages.google.com/web  --(preload inject.ts)-->  main process  -->  popup window / tray / gallery window
 service worker           --(preload sw.ts)------>  main process
+127.0.0.1:5190           --(notes API)--------->  main process  --(page command)-->  the open Google page
 ```
 
-- `src/main/` - Electron main process: window, tray, menus, popup positioning, gallery, and photo file actions
-- `src/preload/inject.ts` - runs inside Google's page; replaces `window.Notification`, tracks unread count, sends quick replies, and collects photos
+- `src/main/` - Electron main process: window, tray, menus, popup positioning, gallery, photo file actions, and the notes API (`notesApi.ts`)
+- `src/preload/inject.ts` - runs inside Google's page; replaces `window.Notification`, tracks unread count, sends quick replies, collects photos, and reads or deletes notes when the local API asks
 - `src/preload/sw.ts` - runs inside Google's service worker so its notifications also become popups
 - `src/preload/selectors.ts` - **every Google DOM selector, in one file**
 - `src/renderer/popup/`, `src/renderer/gallery/` - popup and gallery UIs (plain TypeScript, no framework)
@@ -97,20 +136,22 @@ Google updates Messages for web regularly, and that can break quick reply, the u
 
 1. Open View > Toggle Developer Tools in the main window.
 2. Inspect the element that stopped working (reply box, send button, chat header, photo).
-3. Update the matching list in `src/preload/selectors.ts`. Each list is tried in order, so add new selectors at the top.
+3. Update the matching list in `src/preload/selectors.ts`. Each list is tried in order, so add new selectors at the top. The notes API uses the message bubble, message menu, and delete confirmation lists in that file.
 
 ## Known limits
 
 - Notifications only arrive while the phone is connected and RexMessages is running (it stays in the tray).
 - The gallery only sees photos Google has loaded for the open conversation; use **Load older** for more.
 - Quick reply opens the conversation in the background, which marks it as read.
+- The notes API only answers while RexMessages is running and signed in to Google Messages. A selector change can make `/notes` look empty, or make delete report that the menu was not found.
+- Delete scrolls the conversation and clicks the on-screen menu, so it switches the open chat and is slower than deleting from a database.
 
 ## Cursor subagents
 
 | Agent | Use for |
 | --- | --- |
-| `messages-inject` | Preload scripts and Google DOM selectors (notifications, quick reply, photo scraping) |
-| `messages-shell` | Main process: windows, tray, popup, gallery window, menus, packaging |
+| `messages-inject` | Preload scripts and Google DOM selectors (notifications, quick reply, photo scraping, notes) |
+| `messages-shell` | Main process: windows, tray, popup, gallery window, menus, notes API, packaging |
 | `messages-docs` | README and CHANGELOG |
 
 See `.cursor/rules/subagent-delegation.mdc`.

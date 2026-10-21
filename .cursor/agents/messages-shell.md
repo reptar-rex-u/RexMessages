@@ -13,7 +13,8 @@ You own the Electron main process and the two local UIs.
 - `src/main/menus.ts` - app menu, tray menu, option toggles
 - `src/main/notify.ts` - popup window, dedupe, `popup:*` IPC, service-worker notification hookup
 - `src/main/gallery.ts`, `src/main/photos.ts` - gallery window and photo file actions
-- `src/main/store.ts` - `settings.json` in userData
+- `src/main/store.ts` - `settings.json` in userData (`notesApiPort`, default 5190, `0` off)
+- `src/main/notesApi.ts` - loopback notes HTTP API on `127.0.0.1`; token file `notes-api.token` in userData
 - `src/main/updater.ts` - electron-updater against GitHub Releases; `scripts/release.mjs` publishes (`npm run release`)
 - `src/renderer/popup/`, `src/renderer/gallery/` - plain TS UIs; `src/preload/popup.ts`, `src/preload/gallery.ts` expose `window.rex`
 - `electron.vite.config.ts`, `package.json` (`build` section for electron-builder)
@@ -21,6 +22,7 @@ You own the Electron main process and the two local UIs.
 ## Hard rules
 
 - Every IPC handler validates its sender webContents.
+- The notes API listens on `127.0.0.1` only and requires the userData token. Do not bind any other interface.
 - Keep the Google page sandboxed with `contextIsolation: true`.
 - Popups must not steal focus (`showInactive`) and are suppressed while the main window is focused or Do not disturb is on.
 - Electron 44 clipboard is async (`clipboard.write` with `ClipboardItem`).

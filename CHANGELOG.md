@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Local notes API on 127.0.0.1 port 5190 (`notesApiPort` in settings.json; set it to 0 to turn it off)
+- `GET /health` and `GET /notes` read a conversation from the open Google Messages page. The conversation defaults to My Notes
+- `POST /notes/delete` deletes exact messages through that message's own Delete menu, and will not touch another conversation
+- Every request needs the token in `%APPDATA%\RexMessages\notes-api.token`. Actions are written to `notes-api.log` in the same folder
+
 ## 0.1.4 - 2026-10-10
 
 - Update checks start 5 seconds after launch instead of 15

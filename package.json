@@ -12,6 +12,7 @@
     "start": "electron-vite preview",
     "build": "npm run typecheck && electron-vite build",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+    "test": "node scripts/test-notes-api.mjs",
     "build:icons": "node scripts/build-icons.mjs",
     "dist": "npm run build && electron-builder --win nsis --publish never",
     "release": "node scripts/release.mjs"

@@ -2,12 +2,14 @@
 
 Google Messages for web (<https://messages.google.com/web>) wrapped as a real Windows app, with corner popups you can reply from, a tray icon with an unread badge, and a photo gallery for the open conversation.
 
+This branch is the private personal build (RexMessages-Personal). The installed name stays **RexMessages** (`productName` and `appId` are unchanged), so it uses the same `%APPDATA%\RexMessages` folder: Google sign-in, settings, and the notes API token carry over from the public app.
+
 ## Features
 
 - **Stays signed in.** Sign in with your Google account (or pair with a QR code) once; the session is kept in its own profile.
 - **Quick reply popups.** New texts show a card in the bottom-right corner with the sender, preview, and a reply box. Press Enter to send; Shift+Enter adds a new line. Cards stack (up to 4), auto-hide after a few seconds, and pause while you hover or type.
 - **Safe sending.** Before sending, the app opens the chat and checks that its header matches the sender. If it can't confirm the chat, or the chat has an unsent draft, nothing is sent and the card says why (use **Open chat** instead).
-- **Tray and badge.** Closing the window hides it to the tray. The tray icon and the taskbar button show the unread count.
+- **Tray and badge.** Closing the window hides it to the tray, and the notes API keeps running. Quit is on the tray menu. The tray icon and the taskbar button show the unread count.
 - **Photo gallery** (File > Photo gallery, or `Ctrl+G`, or right-click a photo). Shows the photos loaded in the open conversation:
   - Grid with hover actions: Save, Copy, Open
   - Viewer with zoom (wheel, `+`/`-`, `0` to fit, double-click), pan (drag), rotate (`R` / `Shift+R`), previous/next (arrow keys)
@@ -15,7 +17,7 @@ Google Messages for web (<https://messages.google.com/web>) wrapped as a real Wi
   - Rotations are applied when you save or copy
   - **Load older** scrolls the chat back to pull in older photos
   - Photos are kept in memory only; nothing is written to disk unless you save it
-- **Options** (menu bar or tray): Do not disturb, notification sound, popup duration (5/8/15/30 s), Start with Windows.
+- **Options** (menu bar or tray): Do not disturb, notification sound, popup duration (5/8/15/30 s), Start with Windows, Automatic updates.
 - **Global hotkey:** `Ctrl+Alt+M` shows or hides the window from anywhere.
 - Spellcheck with suggestions, plus a right-click menu for copying photos and links. External links open in your default browser.
 - **Local notes API.** While the app is running, an assistant can read and delete messages in the My Notes conversation over `127.0.0.1` port 5190. Details below.
@@ -57,7 +59,19 @@ Download `RexMessages-Setup-<version>.exe` from the [latest release](https://git
 
 ## Updates
 
-Installed copies check [GitHub Releases](https://github.com/reptar-rex-u/RexMessages/releases) 5 seconds after starting and every 4 hours. New versions download in the background. When one is ready, a dialog asks **Restart now** or **Later**; Later installs it the next time you quit (Help > Restart to update also works). Help > Check for updates checks on demand. The update log is `%APPDATA%\RexMessages\updater.log`.
+Automatic updates are off in this build. `autoUpdate` in `%APPDATA%\RexMessages\settings.json` defaults to `false`. While it is false, the updater sets `autoDownload` and `autoInstallOnAppQuit` to false and does not check GitHub, so a public release cannot replace this copy. A settings file that has no `autoUpdate` key gets `false`.
+
+**Options > Automatic updates** (or the same checkbox on the tray menu) turns checks on. Installed copies then check [GitHub Releases](https://github.com/reptar-rex-u/RexMessages/releases) 5 seconds later and every 4 hours. New versions download in the background. When one is ready, a dialog asks **Restart now** or **Later**; Later installs it the next time you quit. Help > Check for updates checks on demand, and while updates are off that item explains they are off. The update log is `%APPDATA%\RexMessages\updater.log`.
+
+## Start with Windows
+
+Start with Windows is on by default. The login item uses Electron's `app.setLoginItemSettings` with `--hidden`, so the window stays in the tray and the notes API is already listening. Uncheck **Start with Windows** to turn the login item off.
+
+A `settings.json` that already contains `"startWithWindows": false` keeps that saved choice. Check the box once to register the login item. The login item is applied only in the installed app, so a dev run does not register Electron itself.
+
+## Quitting
+
+The close button hides the window. `window-all-closed` does not quit. The tray menu **Quit** is what exits, which also stops the notes API. File > Hide to tray (`Ctrl+W`) hides the window the same way.
 
 ### Publishing an update
 
@@ -128,7 +142,7 @@ Quick reply only sends after the chat header exactly matches the sender (emoji a
 
 While the window is hidden, the page is told it doesn't have focus; otherwise Google assumes you're reading the chat and skips notifications. After Google Account sign-in the app remembers the account address (`/web/u/0/`) and opens it on startup.
 
-Settings are saved in `%APPDATA%\RexMessages\settings.json`. The Google session lives in the app's `persist:messages` profile under the same folder.
+Settings are saved in `%APPDATA%\RexMessages\settings.json`. The Google session lives in the app's `persist:messages` profile under the same folder. The personal build keeps the RexMessages app name so that folder is the one the public app already uses.
 
 ## When Google changes their site
 

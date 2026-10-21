@@ -335,6 +335,6 @@ if (!app.requestSingleInstanceLock()) {
   })
 
   app.on('window-all-closed', () => {
-    // Stay alive in the tray; quitting happens from the menu.
+    // Stay alive in the tray so the notes API keeps running. Quit is the tray menu.
   })
 }

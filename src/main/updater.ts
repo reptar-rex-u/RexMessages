@@ -3,6 +3,7 @@ import { appendFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { autoUpdater } from 'electron-updater'
 import { setQuitting } from './windows'
+import { getSettings } from './store'
 
 const CHECK_EVERY_MS = 4 * 60 * 60 * 1000
 const FIRST_CHECK_DELAY_MS = 5 * 1000
@@ -16,6 +17,10 @@ export type UpdateState =
 
 let state: UpdateState = { status: 'idle' }
 let manualCheck = false
+let wired = false
+let scheduled = false
+let firstCheck: NodeJS.Timeout | undefined
+let repeatCheck: NodeJS.Timeout | undefined
 let onChange: (state: UpdateState) => void = () => {}
 
 const logFile = join(app.getPath('userData'), 'updater.log')
@@ -37,19 +42,41 @@ export function getUpdateState(): UpdateState {
   return state
 }
 
-export function initUpdater(changed: (state: UpdateState) => void): void {
-  onChange = changed
-  if (!app.isPackaged) return
+function updatesAllowed(): boolean {
+  return getSettings().autoUpdate
+}
 
+/** A public release must not replace this build unless Options > Automatic updates is on. */
+function applyUpdaterFlags(enabled: boolean): void {
+  autoUpdater.autoDownload = enabled
+  autoUpdater.autoInstallOnAppQuit = enabled
+  autoUpdater.disableWebInstaller = true
+}
+
+function stopSchedule(): void {
+  clearTimeout(firstCheck)
+  clearInterval(repeatCheck)
+  firstCheck = undefined
+  repeatCheck = undefined
+  scheduled = false
+}
+
+function startSchedule(): void {
+  if (scheduled || !app.isPackaged || !updatesAllowed()) return
+  scheduled = true
+  firstCheck = setTimeout(() => void checkForUpdates(false), FIRST_CHECK_DELAY_MS)
+  repeatCheck = setInterval(() => void checkForUpdates(false), CHECK_EVERY_MS)
+}
+
+function wireListeners(): void {
+  if (wired) return
+  wired = true
   autoUpdater.logger = {
     info: (...a: unknown[]) => log('info', ...a),
     warn: (...a: unknown[]) => log('warn', ...a),
     error: (...a: unknown[]) => log('error', ...a),
     debug: (...a: unknown[]) => log('debug', ...a)
   }
-  autoUpdater.autoDownload = true
-  autoUpdater.autoInstallOnAppQuit = true
-  autoUpdater.disableWebInstaller = true
 
   autoUpdater.on('checking-for-update', () => setState({ status: 'checking' }))
   autoUpdater.on('update-available', (info) => setState({ status: 'downloading', version: info.version, percent: 0 }))
@@ -70,6 +97,7 @@ export function initUpdater(changed: (state: UpdateState) => void): void {
     }
   })
   autoUpdater.on('update-downloaded', (info) => {
+    if (!updatesAllowed()) return
     manualCheck = false
     setState({ status: 'ready', version: info.version })
     promptRestart(info.version)
@@ -87,11 +115,38 @@ export function initUpdater(changed: (state: UpdateState) => void): void {
     }
   })
 
-  setTimeout(() => void checkForUpdates(false), FIRST_CHECK_DELAY_MS)
-  setInterval(() => void checkForUpdates(false), CHECK_EVERY_MS)
+}
+
+export function initUpdater(changed: (state: UpdateState) => void): void {
+  onChange = changed
+  applyUpdaterFlags(false)
+  if (updatesAllowed()) setAutoUpdateEnabled(true)
+}
+
+/** Turn background checks and install-on-quit on or off without stacking timers. */
+export function setAutoUpdateEnabled(enabled: boolean): void {
+  applyUpdaterFlags(enabled)
+  if (!enabled) {
+    stopSchedule()
+    return
+  }
+  if (!app.isPackaged) return
+  wireListeners()
+  startSchedule()
 }
 
 export async function checkForUpdates(manual: boolean): Promise<void> {
+  if (!updatesAllowed()) {
+    if (manual) {
+      void dialog.showMessageBox({
+        type: 'info',
+        title: 'RexMessages',
+        message: 'Automatic updates are off',
+        detail: 'This build will not download or install a public release. Turn on Automatic updates under Options to check.'
+      })
+    }
+    return
+  }
   if (!app.isPackaged) {
     if (manual) {
       void dialog.showMessageBox({
@@ -138,7 +193,7 @@ function promptRestart(version: string): void {
 }
 
 export function restartToUpdate(): void {
-  if (state.status !== 'ready') return
+  if (!updatesAllowed() || state.status !== 'ready') return
   setQuitting()
   autoUpdater.quitAndInstall(false, true)
 }

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Personal build: `autoUpdate` defaults to false, and the updater will not download or install a public release until that setting is turned on
+- Start with Windows defaults to on and launches with `--hidden` (tray only). Uncheck it to turn the login item off
+- Closing the window hides to the tray. Quit is on the tray menu, so the notes API stays up until then
+- App name and productName stay RexMessages, so the same `%APPDATA%\RexMessages` folder keeps the token, settings, and Google sign-in
 - Local notes API on 127.0.0.1 port 5190 (`notesApiPort` in settings.json; set it to 0 to turn it off)
 - `GET /health` and `GET /notes` read a conversation from the open Google Messages page. The conversation defaults to My Notes
 - `POST /notes/delete` deletes exact messages through that message's own Delete menu, and will not touch another conversation

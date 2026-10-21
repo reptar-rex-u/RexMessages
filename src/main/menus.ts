@@ -5,7 +5,7 @@ import { pushPopupSettings } from './notify'
 import { openGallery } from './gallery'
 import { getMainWindow, showMain } from './windows'
 import { PAIRING_URL } from './paths'
-import { checkForUpdates, getUpdateState, restartToUpdate } from './updater'
+import { checkForUpdates, getUpdateState, restartToUpdate, setAutoUpdateEnabled } from './updater'
 
 const POPUP_DURATIONS = [5, 8, 15, 30]
 
@@ -13,9 +13,10 @@ export function applyLoginItem(enabled: boolean): void {
   app.setLoginItemSettings({ openAtLogin: enabled, args: ['--hidden'] })
 }
 
-function toggle(key: 'doNotDisturb' | 'sound' | 'startWithWindows'): void {
+function toggle(key: 'doNotDisturb' | 'sound' | 'startWithWindows' | 'autoUpdate'): void {
   const next = updateSettings({ [key]: !getSettings()[key] })
   if (key === 'startWithWindows') applyLoginItem(next.startWithWindows)
+  if (key === 'autoUpdate') setAutoUpdateEnabled(next.autoUpdate)
   if (key === 'sound') pushPopupSettings()
   refreshMenus()
 }
@@ -41,7 +42,8 @@ function optionItems(): MenuItemConstructorOptions[] {
       }))
     },
     { type: 'separator' },
-    { label: 'Start with Windows', type: 'checkbox', checked: s.startWithWindows, click: () => toggle('startWithWindows') }
+    { label: 'Start with Windows', type: 'checkbox', checked: s.startWithWindows, click: () => toggle('startWithWindows') },
+    { label: 'Automatic updates', type: 'checkbox', checked: s.autoUpdate, click: () => toggle('autoUpdate') }
   ]
 }
 
@@ -72,9 +74,7 @@ export function buildAppMenu(): Menu {
         { label: 'Pair with QR code', click: () => void getMainWindow()?.loadURL(PAIRING_URL) },
         { type: 'separator' },
         { label: 'Reload', accelerator: 'CmdOrCtrl+R', click: () => getMainWindow()?.webContents.reload() },
-        { label: 'Hide to tray', accelerator: 'CmdOrCtrl+W', click: () => getMainWindow()?.hide() },
-        { type: 'separator' },
-        { label: 'Quit', accelerator: 'CmdOrCtrl+Q', click: quit }
+        { label: 'Hide to tray', accelerator: 'CmdOrCtrl+W', click: () => getMainWindow()?.hide() }
       ]
     },
     { label: 'Options', submenu: optionItems() },

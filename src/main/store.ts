@@ -16,6 +16,8 @@ export interface Settings {
   sound: boolean
   popupSeconds: number
   startWithWindows: boolean
+  /** When false, a public GitHub release cannot download or install over this build. */
+  autoUpdate: boolean
   /** Google account slot after account sign-in, e.g. "/web/u/0/"; empty for QR pairing. */
   accountPath: string
   /** Loopback notes API port. 0 turns the API off. */
@@ -28,7 +30,8 @@ const defaults: Settings = {
   doNotDisturb: false,
   sound: true,
   popupSeconds: 8,
-  startWithWindows: false,
+  startWithWindows: true,
+  autoUpdate: false,
   accountPath: '',
   notesApiPort: 5190
 }
